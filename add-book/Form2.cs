@@ -49,6 +49,7 @@ namespace add_book
                 textBoxTitle.Clear();
                 textBoxAuthor.Clear();
                 comboBoxBookType.SelectedIndex = -1;
+                checkBoxAvailable.Checked = false;
                 buttonSave.Enabled = false;
                 BeginInvoke(() => ActiveControl = null);
             }
