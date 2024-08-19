@@ -19,6 +19,7 @@ namespace add_book
             CancelButton = buttonCancel;
             AcceptButton = buttonSave;
             buttonSave.DialogResult = DialogResult.OK;
+            buttonSave.Enabled = false;
             textBoxTitle.PlaceholderText = "Title";
             textBoxAuthor.PlaceholderText = "Author";
             comboBoxBookType.Items.AddRange(
