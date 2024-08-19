@@ -45,12 +45,6 @@ namespace add_book
             base.OnVisibleChanged(e);
             if(Visible)
             {
-                // Initialize
-                textBoxTitle.Clear();
-                textBoxAuthor.Clear();
-                comboBoxBookType.SelectedIndex = -1;
-                checkBoxAvailable.Checked = false;
-                buttonSave.Enabled = false;
                 BeginInvoke(() => ActiveControl = null);
             }
         }

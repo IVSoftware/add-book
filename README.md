@@ -38,11 +38,8 @@ As I understand it, the purpose of `Form2` is simply to collect the information 
             base.OnVisibleChanged(e);
             if(Visible)
             {
-                // Initialize
-                textBoxTitle.Clear();
-                textBoxAuthor.Clear();
-                comboBoxBookType.SelectedIndex = -1;
-                buttonSave.Enabled = false;
+                // Prevents the text box from obtaining focus 
+                // so that the placeholder text remains visible.
                 BeginInvoke(() => ActiveControl = null);
             }
         }
@@ -55,110 +52,110 @@ As I understand it, the purpose of `Form2` is simply to collect the information 
  
 ___
 
-With `Form2` declared as a member of the main `Form1`, just capture the `DialogResult` of the `ShowDialog` method and if the operation hasn't been cancelled then the main form - which has everything it requires in terms of the list of books and the ability to save it - can proceed to do the heavy lifting without the need to subscribe to events or pass references.
+Making a new `Form2` instance in the handler for `buttonAdd_Click` resets the placeholder text providing a "fresh start" every time a new book is added. The `using` block ensures proper disposal of the form handle when the dialog closes. Make sure to inspect the `DialogResult` of the `ShowDialog` method before leaving the `using` block, and if the operation hasn't been cancelled then the main form - which has everything it requires in terms of the list of books and the ability to save it - can proceed to do the heavy lifting without the need to subscribe to events or pass references.
 
 Here's some example code for the `ShowDialog` call that retrieves the necessary properties to create a new book and adds it to the list in memory. You should be able to easily adapt this to use the `Import` class that you say is required by the assignment.
 
 ```csharp
-   public partial class Form1 : Form
-   {
-       public Random rnd = new Random();
-       public int? lastResult = null;
-       public string JsonPath { get; } =
-           Path.Combine(
-               Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-               Assembly.GetEntryAssembly()?.GetName().Name!,
-               "library.json");
+    public partial class Form1 : Form
+    {
+        public Random rnd = new Random();
+        public int? lastResult = null;
+        public string JsonPath { get; } =
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                Assembly.GetEntryAssembly()?.GetName().Name!,
+                "library.json");
 
-       List<Book> Books;
-       public Form1()
-       {
-           InitializeComponent();
-           Form2 = new Form2();
-           Disposed += (sender, e) => Form2.Dispose();
-           StartPosition = FormStartPosition.CenterScreen;
-           textBox1.PlaceholderText = "Click for Suggestion";
-           textBox1.ReadOnly = true;
-           textBox1.TabStop = false;
-           Directory.CreateDirectory(Path.GetDirectoryName(JsonPath)!);
-       }
-       Form2 Form2;
+        List<Book> Books;
+        public Form1()
+        {
+            InitializeComponent();
+            StartPosition = FormStartPosition.CenterScreen;
+            textBox1.PlaceholderText = "Click for Suggestion";
+            textBox1.ReadOnly = true;
+            textBox1.TabStop = false;
+            Directory.CreateDirectory(Path.GetDirectoryName(JsonPath)!);
+        }
 
-       // using Newtonsoft.Json
-       protected override void OnLoad(EventArgs e)
-       {
-           base.OnLoad(e);
-           if (File.Exists(JsonPath))
-           {
-               Books = JsonConvert.DeserializeObject<List<Book>>(File.ReadAllText(JsonPath))!;
-           }
-           else
-           {
-               Books = new List<Book>();
-           }
-           switch (Books.Count)
-           {
-               case 0:
-                   buttonSuggest.Enabled = false;
-                   break;
-               case 1:
-                   textBox1.Text = Books.Single().ToString();
-                   buttonSuggest.Enabled = false;
-                   break;
-               default:
-                   buttonSuggest.Enabled = true;
-                   break;
-           }
-       }
+        // using Newtonsoft.Json
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            if (File.Exists(JsonPath))
+            {
+                Books = JsonConvert.DeserializeObject<List<Book>>(File.ReadAllText(JsonPath))!;
+            }
+            else
+            {
+                Books = new List<Book>();
+            }
+            switch (Books.Count)
+            {
+                case 0:
+                    buttonSuggest.Enabled = false;
+                    break;
+                case 1:
+                    textBox1.Text = Books.Single().ToString();
+                    buttonSuggest.Enabled = false;
+                    break;
+                default:
+                    buttonSuggest.Enabled = true;
+                    break;
+            }
+        }
 
-       private void buttonAdd_Click(object sender, EventArgs e)
-       {
-           switch (Form2.ShowDialog(this))
-           {
-               case DialogResult.OK:
-                   var book = new Book
-                   {
-                       Title = Form2.BookTitle,
-                       Author = Form2.Author,
-                       BookType = Form2.BookType,
-                       Available = Form2.Available,
-                   };
-                   Books.Add(book);
-                   textBox1.Text = book.ToString();
-                   lastResult = Books.Count;
-                   File.WriteAllText(JsonPath, JsonConvert.SerializeObject(Books, Formatting.Indented));
-                   buttonSuggest.Enabled = Books.Count > 1;
-                   break;
-               case DialogResult.Cancel:
-                   break;
-           }
-       }
+        private void buttonAdd_Click(object sender, EventArgs e)
+        {
+            using (var form2 = new Form2())
+            {
+                switch (form2.ShowDialog(this))
+                {
+                    case DialogResult.OK:
+                        var book = new Book
+                        {
+                            Title = form2.BookTitle,
+                            Author = form2.Author,
+                            BookType = form2.BookType,
+                            Available = form2.Available,
+                        };
+                        Books.Add(book);
+                        textBox1.Text = book.ToString();
+                        lastResult = Books.Count;
+                        File.WriteAllText(JsonPath, JsonConvert.SerializeObject(Books, Formatting.Indented));
+                        buttonSuggest.Enabled = Books.Count > 1;
+                        break;
+                    case DialogResult.Cancel:
+                        break;
+                }
+            }
+        }
 
-       private void buttonSuggest_Click(object sender, EventArgs e)
-       {
-           textBox1.Clear();
-           switch (Books.Count)
-           {
-               case 0:
-                   textBox1.Clear();
-                   break;
-               case 1:
-                   textBox1.Text = Books.Single().ToString();
-                   break;
-               default:
-                   while (true)
-                   {
-                       int result = rnd.Next(0, Books.Count);
-                       if (result != lastResult)
-                       {
-                           textBox1.Text = Books[result].ToString();
-                           lastResult = result;
-                           return;
-                       }
-                   }
-           }
-       }
-   }
+        private void buttonSuggest_Click(object sender, EventArgs e)
+        {
+            textBox1.Clear();
+            switch (Books.Count)
+            {
+                case 0:
+                    textBox1.Clear();
+                    break;
+                case 1:
+                    textBox1.Text = Books.Single().ToString();
+                    break;
+                default:
+                    while (true)
+                    {
+                        int result = rnd.Next(0, Books.Count);
+                        if (result != lastResult)
+                        {
+                            textBox1.Text = Books[result].ToString();
+                            lastResult = result;
+                            return;
+                        }
+                    }
+            }
+        }
+    }
 ```
 
 ___

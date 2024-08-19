@@ -19,15 +19,12 @@ namespace add_book
         public Form1()
         {
             InitializeComponent();
-            Form2 = new Form2();
-            Disposed += (sender, e) => Form2.Dispose();
             StartPosition = FormStartPosition.CenterScreen;
             textBox1.PlaceholderText = "Click for Suggestion";
             textBox1.ReadOnly = true;
             textBox1.TabStop = false;
             Directory.CreateDirectory(Path.GetDirectoryName(JsonPath)!);
         }
-        Form2 Form2;
 
         // using Newtonsoft.Json
         protected override void OnLoad(EventArgs e)
@@ -58,30 +55,32 @@ namespace add_book
 
         private void buttonAdd_Click(object sender, EventArgs e)
         {
-            switch (Form2.ShowDialog(this))
+            using (var form2 = new Form2())
             {
-                case DialogResult.OK:
-                    var book = new Book
-                    {
-                        Title = Form2.BookTitle,
-                        Author = Form2.Author,
-                        BookType = Form2.BookType,
-                        Available = Form2.Available,
-                    };
-                    Books.Add(book);
-                    textBox1.Text = book.ToString();
-                    lastResult = Books.Count;
-                    File.WriteAllText(JsonPath, JsonConvert.SerializeObject(Books, Formatting.Indented));
-                    buttonSuggest.Enabled = Books.Count > 1;
-                    break;
-                case DialogResult.Cancel:
-                    break;
+                switch (form2.ShowDialog(this))
+                {
+                    case DialogResult.OK:
+                        var book = new Book
+                        {
+                            Title = form2.BookTitle,
+                            Author = form2.Author,
+                            BookType = form2.BookType,
+                            Available = form2.Available,
+                        };
+                        Books.Add(book);
+                        textBox1.Text = book.ToString();
+                        lastResult = Books.Count;
+                        File.WriteAllText(JsonPath, JsonConvert.SerializeObject(Books, Formatting.Indented));
+                        buttonSuggest.Enabled = Books.Count > 1;
+                        break;
+                    case DialogResult.Cancel:
+                        break;
+                }
             }
         }
 
         private void buttonSuggest_Click(object sender, EventArgs e)
         {
-            textBox1.Clear();
             switch (Books.Count)
             {
                 case 0:
